@@ -16,7 +16,7 @@ class Pool(Base):
     name = Column(String, nullable=False)
     pool_type = Column(String, nullable=False)
 
-    starting_lives = Column(Integer, default=3)
+    starting_lives = Column(Integer, default=5)
     picks_per_week = Column(Integer, default=1)
     total_games_per_week = Column(Integer, default=0)
 
@@ -75,7 +75,7 @@ class PoolSettings(Base):
     id = Column(Integer, primary_key=True, index=True)
     pool_id = Column(Integer, ForeignKey("pools.id"), nullable=False)
 
-    starting_lives = Column(Integer, default=3)
+    starting_lives = Column(Integer, default=5)
     picks_per_week = Column(Integer, default=1)
     total_games_per_week = Column(Integer, default=5)
 
@@ -107,7 +107,7 @@ class PoolMember(Base):
     pool_id = Column(Integer, ForeignKey("pools.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    remaining_lives = Column(Integer, default=3)
+    remaining_lives = Column(Integer, default=5)
     buyin_adjustment = Column(Integer, default=0)
     buyin_date = Column(String, default="")
 
