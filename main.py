@@ -64,7 +64,8 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    # ⭐ IMPORTANT FIX FOR FLUTTER WEB LOGIN ⭐
+    allow_headers=["*", "Content-Type"],
 )
 
 # ---------------------------------------------------------
@@ -124,8 +125,8 @@ def health_check():
     return {"status": "ok"}
 
 # ---------------------------------------------------------
-# DEBUG HEADERS
+# DEBUG HEADERS (NOW SUPPORTS GET + POST)
 # ---------------------------------------------------------
-@app.post("/debug/headers")
+@app.api_route("/debug/headers", methods=["GET", "POST"])
 async def debug_headers(request: Request):
     return {"headers": dict(request.headers)}
