@@ -24,13 +24,7 @@ from teams.models import Team
 # ---------------------------------------------------------
 from auth.router import router as auth_router
 from pools.router import router as pools_router
-
-# ⭐ Only pool‑scoped picks router (correct one)
 from pools.picks_router import router as pool_picks_router
-
-# ❌ Global picks router removed (you deleted routes/picks.py)
-# from routes.picks import router as picks_router
-
 from teams.router import router as fantasy_teams_router
 
 # ---------------------------------------------------------
@@ -43,9 +37,9 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------
-# HOME PAGE (so / works on PC or mobile)
+# HOME PAGE (Render requires HEAD support)
 # ---------------------------------------------------------
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def root():
     return {"message": "NHL Fantasy API is running"}
 
@@ -64,24 +58,15 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    # ⭐ IMPORTANT FIX FOR FLUTTER WEB LOGIN ⭐
     allow_headers=["*", "Content-Type"],
 )
 
 # ---------------------------------------------------------
 # ROUTERS (ORDER MATTERS!)
 # ---------------------------------------------------------
-
-# 1️⃣ Auth first
 app.include_router(auth_router)
-
-# 2️⃣ Pools router (must come BEFORE picks)
 app.include_router(pools_router)
-
-# 3️⃣ Pool‑scoped picks router (now correct prefix="/pools")
 app.include_router(pool_picks_router)
-
-# 4️⃣ Fantasy teams router
 app.include_router(fantasy_teams_router)
 
 # ---------------------------------------------------------
@@ -125,7 +110,7 @@ def health_check():
     return {"status": "ok"}
 
 # ---------------------------------------------------------
-# DEBUG HEADERS (NOW SUPPORTS GET + POST)
+# DEBUG HEADERS (GET + POST)
 # ---------------------------------------------------------
 @app.api_route("/debug/headers", methods=["GET", "POST"])
 async def debug_headers(request: Request):

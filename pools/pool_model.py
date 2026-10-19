@@ -13,7 +13,7 @@ class Pool(Base):
 
     # Pool configuration
     pool_type = Column(String, default="standard")
-    starting_lives = Column(Integer, default=3)
+    starting_lives = Column(Integer, default=5)
     picks_per_week = Column(Integer, default=1)
     total_games_per_week = Column(Integer, default=5)
 

@@ -44,19 +44,15 @@ def get_settings(
 ):
     ensure_commissioner(db, pool_id, user.id)
 
-    pool = db.query(Pool).filter(Pool.id == pool_id).first()
-    if not pool:
-        raise HTTPException(status_code=404, detail="Pool not found")
-
-    # Pull from PoolSettings if it exists
     settings = db.query(PoolSettings).filter(PoolSettings.pool_id == pool_id).first()
+    if not settings:
+        raise HTTPException(status_code=404, detail="Settings not found")
 
     return {
         "pool_id": pool_id,
-        "pool_type": pool.pool_type,  # still readable, but no longer updated here
-        "starting_lives": settings.starting_lives if settings else pool.starting_lives,
-        "picks_per_week": settings.picks_per_week if settings else pool.picks_per_week,
-        "total_games_per_week": settings.total_games_per_week if settings else pool.total_games_per_week,
+        "starting_lives": settings.starting_lives,
+        "picks_per_week": settings.picks_per_week,
+        "total_games_per_week": settings.total_games_per_week,
     }
 
 
@@ -70,14 +66,9 @@ def update_settings(
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
-    pool = ensure_commissioner(db, pool_id, user.id)
+    ensure_commissioner(db, pool_id, user.id)
 
-    # Update Pool table (legacy fields) — pool_type no longer touched
-    pool.starting_lives = payload.starting_lives
-    pool.picks_per_week = payload.picks_per_week
-    pool.total_games_per_week = payload.total_games_per_week
-
-    # Update PoolSettings table (primary settings)
+    # Update PoolSettings (REAL source of truth)
     settings = db.query(PoolSettings).filter(PoolSettings.pool_id == pool_id).first()
 
     if not settings:
@@ -101,13 +92,11 @@ def update_settings(
         m.remaining_lives = payload.starting_lives + m.buyin_adjustment
 
     db.commit()
-    db.refresh(pool)
     db.refresh(settings)
 
     return {
         "message": "Settings updated",
         "pool_id": pool_id,
-        "pool_type": pool.pool_type,  # unchanged, still returned
         "starting_lives": settings.starting_lives,
         "picks_per_week": settings.picks_per_week,
         "total_games_per_week": settings.total_games_per_week,
@@ -115,7 +104,7 @@ def update_settings(
 
 
 # ---------------------------------------------------------
-# ⭐ NEW: Update a member's lives (commissioner or user)
+# Update a member's lives (commissioner or user)
 # ---------------------------------------------------------
 class LivesUpdate(BaseModel):
     remaining_lives: int

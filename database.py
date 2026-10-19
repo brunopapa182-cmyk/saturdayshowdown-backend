@@ -1,13 +1,23 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# SQLite database file stored in the project root
-DATABASE_URL = "sqlite:///./nhl.db"
+# ---------------------------------------------------------
+# NEON POSTGRESQL URL (Persistent, IPv4, FastAPI Compatible)
+# ---------------------------------------------------------
 
-# Create engine
+DATABASE_URL = (
+    "postgresql://neondb_owner:npg_8IvM0ajolSUG"
+    "@ep-little-sound-b5xd7dx6-pooler.c-7.us-east-2.aws.neon.tech/"
+    "neondb?sslmode=require&channel_binding=require"
+)
+
+# Debug print so you can confirm in local logs or Render logs
+print("Using database:", DATABASE_URL)
+
+# Create engine (PostgreSQL)
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    pool_pre_ping=True,
 )
 
 # Session factory

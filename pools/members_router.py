@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from pools.models import Pool, PoolMember
+from pools.models import Pool, PoolMember, PoolSettings
 from teams.models import Team
 from auth.dependencies import get_current_user
 
@@ -44,7 +44,18 @@ def join_pool(
     if existing:
         raise HTTPException(status_code=400, detail="User already joined this pool")
 
-    member = PoolMember(pool_id=pool_id, user_id=user.id)
+    # ⭐ NEW: Fetch starting lives from PoolSettings
+    settings = db.query(PoolSettings).filter(PoolSettings.pool_id == pool_id).first()
+    if not settings:
+        raise HTTPException(status_code=500, detail="Pool settings missing")
+
+    # ⭐ NEW: Assign correct starting lives to new members
+    member = PoolMember(
+        pool_id=pool_id,
+        user_id=user.id,
+        remaining_lives=settings.starting_lives
+    )
+
     db.add(member)
     db.commit()
     db.refresh(member)
@@ -74,7 +85,7 @@ def list_members(
         db.query(PoolMember, Team)
         .join(Team, Team.user_id == PoolMember.user_id)
         .filter(PoolMember.pool_id == pool_id)
-        .filter(Team.pool_id == pool_id)   # ⭐ FIX: Only show teams from THIS pool
+        .filter(Team.pool_id == pool_id)   # ⭐ Only show teams from THIS pool
         .all()
     )
 

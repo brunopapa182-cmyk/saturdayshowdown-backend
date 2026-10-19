@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from pools.models import Pool, PoolMember
+from pools.models import Pool, PoolMember, PoolSettings
 from auth.dependencies import get_current_user
 
 from schemas import PoolCreate, PoolRead
@@ -28,17 +28,38 @@ def create_pool(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+    # 1️⃣ Create pool WITHOUT starting_lives on Pool itself
     pool = Pool(
         name=pool_data.name,
         owner_id=user.id,
         pool_type=pool_data.pool_type,
-        starting_lives=pool_data.starting_lives,
         picks_per_week=pool_data.picks_per_week,
         total_games_per_week=pool_data.total_games_per_week,
     )
     db.add(pool)
     db.commit()
     db.refresh(pool)
+
+    # 2️⃣ Create PoolSettings as the source of truth
+    settings = PoolSettings(
+        pool_id=pool.id,
+        starting_lives=pool_data.starting_lives,
+        picks_per_week=pool_data.picks_per_week,
+        total_games_per_week=pool_data.total_games_per_week,
+    )
+    db.add(settings)
+
+    # 3️⃣ Add commissioner as a member with correct lives
+    commissioner_member = PoolMember(
+        pool_id=pool.id,
+        user_id=user.id,
+        remaining_lives=pool_data.starting_lives,
+    )
+    db.add(commissioner_member)
+
+    db.commit()
+    db.refresh(pool)
+
     return pool
 
 
@@ -59,7 +80,7 @@ def list_pools(
 
 
 # ---------------------------------------------------------
-# ⭐ NEW: GET SINGLE POOL (Flutter requires this)
+# GET SINGLE POOL
 # ---------------------------------------------------------
 @router.get("/pools/{pool_id}", response_model=PoolRead)
 def get_pool(
@@ -67,16 +88,24 @@ def get_pool(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    pool = db.query(Pool).filter(Pool.id == pool_id).first()
+    pool = (
+        db.query(Pool)
+        .filter(Pool.id == pool_id)
+        .first()
+    )
 
     if not pool:
         raise HTTPException(status_code=404, detail="Pool not found")
 
     # Ensure user is a member
-    member = db.query(PoolMember).filter(
-        PoolMember.pool_id == pool_id,
-        PoolMember.user_id == user.id
-    ).first()
+    member = (
+        db.query(PoolMember)
+        .filter(
+            PoolMember.pool_id == pool_id,
+            PoolMember.user_id == user.id,
+        )
+        .first()
+    )
 
     if not member:
         raise HTTPException(status_code=403, detail="User is not a member of this pool")

@@ -5,7 +5,7 @@ from datetime import datetime
 from database import Base
 
 # ---------------------------------------------------------
-# POOL MODEL (⭐ REQUIRED — FIXED)
+# POOL MODEL
 # ---------------------------------------------------------
 class Pool(Base):
     __tablename__ = "pools"
@@ -16,58 +16,50 @@ class Pool(Base):
     name = Column(String, nullable=False)
     pool_type = Column(String, nullable=False)
 
+    # ⚠️ Deprecated as source of truth — keep for legacy, but don't use in UI
     starting_lives = Column(Integer, default=5)
     picks_per_week = Column(Integer, default=1)
     total_games_per_week = Column(Integer, default=0)
 
-
     # Relationships
     members = relationship("PoolMember", backref="pool")
-    settings = relationship("PoolSettings", backref="pool")
+    settings = relationship("PoolSettings", backref="pool", uselist=True)
     buyins = relationship("BuyIn", backref="pool")
     news = relationship("NewsEvent", backref="pool")
     games = relationship("Game", backref="pool")
 
 
 # ---------------------------------------------------------
-# GAME MODEL (⭐ REQUIRED FOR SCORING + INGEST)
+# GAME MODEL
 # ---------------------------------------------------------
 class Game(Base):
     __tablename__ = "games"
 
     id = Column(Integer, primary_key=True, index=True)
-
-    # Every game belongs to a pool
     pool_id = Column(Integer, ForeignKey("pools.id"), nullable=False)
 
-    # NHL API fields
-    game_date = Column(DateTime, nullable=False)   # real DateTime
-    game_time = Column(Time, nullable=True)        # local start time
+    game_date = Column(DateTime, nullable=False)
+    game_time = Column(Time, nullable=True)
 
-    # IDs
     home_team = Column(String, nullable=False)
     away_team = Column(String, nullable=False)
 
-    # ⭐ NEW FIELDS: REAL NHL TEAM DATA
     home_team_name = Column(String, nullable=True)
     away_team_name = Column(String, nullable=True)
     home_abbrev = Column(String, nullable=True)
     away_abbrev = Column(String, nullable=True)
 
-    # Scores
     home_score = Column(Integer, nullable=True)
     away_score = Column(Integer, nullable=True)
 
-    # Result fields
     is_completed = Column(Boolean, default=False)
-    winner = Column(String, nullable=True)  # "home", "away", or teamId
+    winner = Column(String, nullable=True)
 
-    # Relationship to picks
     picks = relationship("Pick", backref="game")
 
 
 # ---------------------------------------------------------
-# POOL SETTINGS
+# POOL SETTINGS (SOURCE OF TRUTH)
 # ---------------------------------------------------------
 class PoolSettings(Base):
     __tablename__ = "pool_settings"
@@ -98,7 +90,7 @@ class BuyIn(Base):
 
 
 # ---------------------------------------------------------
-# POOL MEMBERS
+# POOL MEMBERS (LIVES PER USER)
 # ---------------------------------------------------------
 class PoolMember(Base):
     __tablename__ = "pool_members"
@@ -111,29 +103,19 @@ class PoolMember(Base):
     buyin_adjustment = Column(Integer, default=0)
     buyin_date = Column(String, default="")
 
-    # ⭐ NEW FIELD FOR SURVIVOR ENGINE (Step 8)
     is_eliminated = Column(Boolean, default=False)
 
 
 # ---------------------------------------------------------
-# PICKS (⭐ UPDATED FOR GAME + SCORING)
+# PICKS
 # ---------------------------------------------------------
 class Pick(Base):
     __tablename__ = "picks"
 
-    # Flutter uses string IDs
     id = Column(String, primary_key=True, index=True)
-
-    # User who made the pick
     user_id = Column(String, nullable=False)
-
-    # Game this pick belongs to
     game_id = Column(Integer, ForeignKey("games.id"), nullable=False)
-
-    # "home", "away", or teamId
     selection = Column(String, nullable=True)
-
-    # null until admin grades results
     is_correct = Column(Boolean, nullable=True)
 
 

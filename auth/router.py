@@ -47,6 +47,7 @@ def login(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    # username = email (OAuth2 standard)
     db_user = db.query(User).filter(User.email == username).first()
 
     if not db_user:
